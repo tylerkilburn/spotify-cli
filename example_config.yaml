@@ -2,7 +2,7 @@ spotify:
   client_id: ""
   client_secret: ""
 http:
+  login_endpoint: ""
   port: ""
-  redirect_login: ""
   redirect_endpoint: ""
 local_token_directory: ""
