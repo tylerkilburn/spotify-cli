@@ -1,0 +1,8 @@
+spotify:
+  client_id: ""
+  client_secret: ""
+http:
+  port: ""
+  redirect_login: ""
+  redirect_endpoint: ""
+local_token_directory: ""
