@@ -23,6 +23,7 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("play called")
 		spot.PlayPlaylist("0Ym2JqRqnQmDFWrIzCm4nJ?si=c4526438a45c49c2")
+		// spot.PlayPlaylist("42NqNIHiB37LuNozKWJ37w?si=dfd6023d8da44e35")
 	},
 }
 

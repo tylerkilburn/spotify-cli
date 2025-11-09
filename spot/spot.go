@@ -30,9 +30,14 @@ func PlayPlaylist(playlistId string) {
 		log.Fatalf("Error Marshaling play body: %v", err)
 	}
 
+	accessToken := tokens.GetAccessToken()
+	if accessToken == "" {
+		accessToken = refreshToken()
+	}
+
 	req, err := http.NewRequest(http.MethodPut, SPOTIFY_PLAY_URL, bytes.NewBuffer(payload))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+tokens.GetAccessToken())
+	req.Header.Set("Authorization", "Bearer "+accessToken)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -115,11 +120,11 @@ func exchangeAuthoriztionCode(code string) {
 	exchangeToken(&TokenApiParams{grantType: AUTHORIZATION_CODE, code: code, redirectUri: config.Get().Http.RedirectUri})
 }
 
-func RefreshToken() {
-	exchangeToken(&TokenApiParams{grantType: REFRESH_TOKEN, refreshToken: tokens.GetRefreshToken()})
+func refreshToken() string {
+	return exchangeToken(&TokenApiParams{grantType: REFRESH_TOKEN, refreshToken: tokens.GetRefreshToken()})
 }
 
-func exchangeToken(tokenApiParams *TokenApiParams) {
+func exchangeToken(tokenApiParams *TokenApiParams) string {
 	formData := url.Values{}
 	formData.Set("grant_type", "authorization_code")
 	if tokenApiParams.grantType == "authorization_code" {
@@ -169,4 +174,6 @@ func exchangeToken(tokenApiParams *TokenApiParams) {
 
 	tokens.SetAccessToken(tokenResponse.AccessToken)
 	tokens.SetRefreshToken(tokenResponse.RefreshToken)
+
+	return tokenResponse.AccessToken
 }
