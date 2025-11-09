@@ -1,6 +1,7 @@
 package spot
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -15,7 +16,35 @@ import (
 	"time"
 )
 
-const SPOTIFY_BASE_URL = "https://accounts.spotify.com/authorize" // A simple service to test GET requests
+const SPOTIFY_AUTHORIZE_URL = "https://accounts.spotify.com/authorize" // A simple service to test GET requests
+const SPOTIFY_PLAY_URL = "https://api.spotify.com/v1/me/player/play"
+
+func PlayPlaylist(playlistId string) {
+	payload, err := json.Marshal(map[string]string{
+		"context_uri": "spotify:playlist:" + playlistId,
+	})
+	if err != nil {
+		log.Fatalf("Error Marshaling play body: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPut, SPOTIFY_PLAY_URL, bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+tokens.GetAccessToken())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	response, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatalf("Error when calling Spotify play endpoint: %v", err)
+	}
+	defer response.Body.Close()
+
+	_, err = ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatalf("Error invoking Spotify play: %v", err)
+	}
+}
 
 func ServeLocalLoginPageAndAuthUser() {
 	httpConfig := config.Get().Http
@@ -35,7 +64,7 @@ func ServeLocalLoginPageAndAuthUser() {
 }
 
 func httpLogin(w http.ResponseWriter, req *http.Request) {
-	u, err := url.Parse(SPOTIFY_BASE_URL)
+	u, err := url.Parse(SPOTIFY_AUTHORIZE_URL)
 	if err != nil {
 		fmt.Println("Error parsing URL:", err)
 		return
