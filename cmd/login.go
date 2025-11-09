@@ -7,14 +7,13 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"spotify-cli/config"
 	"spotify-cli/utils"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 )
-
-const PORT = 4202
 
 // loginCmd represents the login command
 var loginCmd = &cobra.Command{
@@ -23,27 +22,25 @@ var loginCmd = &cobra.Command{
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
 
-Cobra is a C LI library for Go that empowers applications.
+Cobra is a CLI library for Go that empowers applications.
 This ap:Wplication is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		httpConfig := config.Get().Http
 		fmt.Println("serving login")
+		fmt.Println(httpConfig.LoginEndpoint)
+		fmt.Println(httpConfig.RedirectEndpoint)
+		fmt.Println(httpConfig.RedirectUri)
 
-		http.HandleFunc("/login", httpLogin)
-		http.HandleFunc("/callback", httpCallback)
+		http.HandleFunc(httpConfig.LoginEndpoint, httpLogin)
+		http.HandleFunc(httpConfig.RedirectEndpoint, httpCallback)
 
-		http.ListenAndServe(":"+fmt.Sprint(PORT), nil)
-		fmt.Println("Server starting on port " + fmt.Sprint(PORT) + "...")
+		http.ListenAndServe(":"+fmt.Sprint(httpConfig.Port), nil)
+		fmt.Println("Server starting on port " + fmt.Sprint(httpConfig.Port) + "...")
 
 		time.Sleep(1 * time.Second)
 	},
 }
-
-const CLIENT_ID = ""
-const CLIENT_SECRET = ""
-
-var scope = []string{"user-read-private", "user-read-email"}
-var redirect_uri = "http://localhost:" + fmt.Sprint(PORT) + "/callback"
 
 func init() {
 	rootCmd.AddCommand(loginCmd)
@@ -70,9 +67,9 @@ func httpLogin(w http.ResponseWriter, req *http.Request) {
 
 	q := u.Query()
 	q.Add("response_type", "code")
-	q.Add("client_id", CLIENT_ID)
-	q.Add("scope", strings.Join(scope, " "))
-	q.Add("redirect_uri", redirect_uri)
+	q.Add("client_id", config.Get().Spotify.ClientId)
+	q.Add("scope", strings.Join(config.Get().Spotify.Scope, " "))
+	q.Add("redirect_uri", config.Get().Http.RedirectUri)
 	q.Add("state", utils.GenerateRandomString(16))
 
 	u.RawQuery = q.Encode()
@@ -95,7 +92,7 @@ func httpCallback(w http.ResponseWriter, req *http.Request) {
 	// Set form data
 	formData := url.Values{}
 	formData.Set("code", code)
-	formData.Set("redirect_uri", redirect_uri)
+	formData.Set("redirect_uri", config.Get().Http.RedirectUri)
 	formData.Set("grant_type", "authorization_code")
 
 	// Create a new HTTP POST request
@@ -108,7 +105,8 @@ func httpCallback(w http.ResponseWriter, req *http.Request) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// Add custom headers
-	encodedAuth := base64.StdEncoding.EncodeToString([]byte(CLIENT_ID + ":" + CLIENT_SECRET))
+	clientCreds := config.Get().Spotify.ClientId + ":" + config.Get().Spotify.ClientSecret
+	encodedAuth := base64.StdEncoding.EncodeToString([]byte(clientCreds))
 	req.Header.Add("Authorization", "Basic "+encodedAuth)
 
 	// Create an HTTP client (you can customize it with timeouts, etc.)

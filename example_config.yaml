@@ -1,8 +1,12 @@
-spotify:
-  client_id: ""
-  client_secret: ""
 http:
+  base_url: ""
   login_endpoint: ""
   port: ""
   redirect_endpoint: ""
 local_token_directory: ""
+spotify:
+  client_id: ""
+  client_secret: ""
+  scope:
+    - ""
+    - ""
