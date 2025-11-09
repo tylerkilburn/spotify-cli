@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"spotify-cli/config"
 	"spotify-cli/tokens"
 	"spotify-cli/utils"
@@ -16,6 +17,8 @@ import (
 	"time"
 )
 
+const AUTHORIZATION_CODE = "authorization_code"
+const REFRESH_TOKEN = "refresh_token"
 const SPOTIFY_AUTHORIZE_URL = "https://accounts.spotify.com/authorize" // A simple service to test GET requests
 const SPOTIFY_PLAY_URL = "https://api.spotify.com/v1/me/player/play"
 
@@ -84,47 +87,67 @@ func httpLogin(w http.ResponseWriter, req *http.Request) {
 }
 
 func httpCallback(w http.ResponseWriter, req *http.Request) {
-	//   var code = req.query.code || null;
-	//   var state = req.query.state || null;
 	queryParams := req.URL.Query()
-
-	// Access a specific parameter by key
 	code := queryParams.Get("code")
-	// state := queryParams.Get("state")
+	exchangeAuthoriztionCode(code)
 
-	// http.Post("https://accounts.spotify.com/api/token",http)
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Logged into Spotify, you may close this browser tab!"))
 
-	// Set form data
+	asyncExit()
+}
+
+func asyncExit() {
+	ch := make(chan int, 0)
+	go os.Exit(0) // Find better way for graceful http shutdown
+	defer close(ch)
+}
+
+type TokenApiParams struct {
+	grantType    string
+	code         string
+	redirectUri  string
+	refreshToken string
+}
+
+func exchangeAuthoriztionCode(code string) {
+	exchangeToken(&TokenApiParams{grantType: AUTHORIZATION_CODE, code: code, redirectUri: config.Get().Http.RedirectUri})
+}
+
+func RefreshToken() {
+	exchangeToken(&TokenApiParams{grantType: REFRESH_TOKEN, refreshToken: tokens.GetRefreshToken()})
+}
+
+func exchangeToken(tokenApiParams *TokenApiParams) {
 	formData := url.Values{}
-	formData.Set("code", code)
-	formData.Set("redirect_uri", config.Get().Http.RedirectUri)
 	formData.Set("grant_type", "authorization_code")
+	if tokenApiParams.grantType == "authorization_code" {
+		formData.Set("code", tokenApiParams.code)
+		formData.Set("redirect_uri", tokenApiParams.redirectUri)
+	} else {
+		formData.Set("refresh_token", tokenApiParams.refreshToken)
+	}
 
-	// Create a new HTTP POST request
 	req, err := http.NewRequest(http.MethodPost, "https://accounts.spotify.com/api/token", strings.NewReader(formData.Encode()))
 	if err != nil {
 		log.Fatalf("Error creating request: %v", err)
 	}
 
-	// Set the Content-Type header for form data
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	// Add custom headers
 	clientCreds := config.Get().Spotify.ClientId + ":" + config.Get().Spotify.ClientSecret
 	encodedAuth := base64.StdEncoding.EncodeToString([]byte(clientCreds))
 	req.Header.Add("Authorization", "Basic "+encodedAuth)
 
-	// Create an HTTP client (you can customize it with timeouts, etc.)
 	client := &http.Client{}
 
-	// Send the request
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatalf("Error sending request: %v", err)
 	}
 	defer resp.Body.Close() // Close the response body when the function exits
 
-	// Read and print the response body
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalf("Error reading response body: %v", err)
@@ -146,7 +169,4 @@ func httpCallback(w http.ResponseWriter, req *http.Request) {
 
 	tokens.SetAccessToken(tokenResponse.AccessToken)
 	tokens.SetRefreshToken(tokenResponse.RefreshToken)
-
-	fmt.Printf("AccesToken: %s\n", tokenResponse.AccessToken)
-	fmt.Printf("RefreshToken: %s\n", tokenResponse.RefreshToken)
 }
