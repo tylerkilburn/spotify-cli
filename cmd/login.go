@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"spotify-cli/config"
+	"spotify-cli/tokens"
 	"spotify-cli/utils"
 	"strings"
 	"time"
@@ -78,6 +80,14 @@ func httpLogin(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, u.String(), http.StatusTemporaryRedirect)
 }
 
+type TokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	ExpiresIn    int    `json:"expires_in"`
+	RefreshToken string `json:"refresh_token"`
+	Scope        string `json:"scope"`
+	TokenType    string `json:"token_type"`
+}
+
 func httpCallback(w http.ResponseWriter, req *http.Request) {
 	//   var code = req.query.code || null;
 	//   var state = req.query.state || null;
@@ -125,6 +135,15 @@ func httpCallback(w http.ResponseWriter, req *http.Request) {
 		log.Fatalf("Error reading response body: %v", err)
 	}
 
-	fmt.Printf("Response Status: %s\n", resp.Status)
-	fmt.Printf("Response Body: %s\n", body)
+	var tokenResponse TokenResponse
+	err = json.Unmarshal(body, &tokenResponse)
+	if err != nil {
+		log.Fatalf("Error unmarshaling response body: %v", err)
+	}
+
+	tokens.SetAccessToken(tokenResponse.AccessToken)
+	tokens.SetRefreshToken(tokenResponse.RefreshToken)
+
+	fmt.Printf("AccesToken: %s\n", tokenResponse.AccessToken)
+	fmt.Printf("RefreshToken: %s\n", tokenResponse.RefreshToken)
 }

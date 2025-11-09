@@ -23,7 +23,9 @@ type YamlConfig struct {
 		RedirectEndpoint string `yaml:"redirect_endpoint"`
 		RedirectUri      string // derived convenience value
 	} `yaml:"http"`
-	LocalTokenDirectory string `yaml:"local_token_directory"`
+	Tokens struct {
+		LocalDirectory string `yaml:"local_directory"`
+	} `yaml:"tokens"`
 }
 
 var configCache *YamlConfig

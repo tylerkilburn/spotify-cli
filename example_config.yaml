@@ -1,12 +1,13 @@
 http:
   base_url: ""
-  login_endpoint: ""
   port: ""
+  login_endpoint: ""
   redirect_endpoint: ""
-local_token_directory: ""
 spotify:
   client_id: ""
   client_secret: ""
   scope:
     - ""
     - ""
+tokens:
+  local_directory: ""
